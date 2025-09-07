@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FixTheEarth:Помоги странам улучшить экологию!</title>
+<style>
+  :root{
+    --bg:#0b1220;          /* общий фон */
+    --panel:#0f172a;       /* панели/карточки */
+    --muted:#94a3b8;       /* вторичный текст */
+    --text:#e2e8f0;        /* основной текст */
+    --accent:#22d3ee;      /* бирюзовые детали */
+    --good:#22c55e;        /* зелёный (верный) */
+    --bad:#ef4444;         /* красный (ошибка) */
+    --warn:#f59e0b;        /* жёлтый (события) */
+    --shadow: 0 10px 30px rgba(0,0,0,.45);
+  @keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes blinkRed {
+  0%, 100% { color: red; }
+  50% { color: white; }
+}
+
+.timer.warning {
+  animation: shake 0.5s infinite, blinkRed 1s infinite;
+}
+  }
+
+  html,body{height:100%;}
+  body{
+    margin:0; background: radial-gradient(1200px 800px at 70% -10%, #102038 0%, #0b1220 55%, #09111c 100%); 
+    color:var(--text); font: 16px/1.45 Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+    overflow-x:hidden;
+  }
+  .wrap{max-width:1100px; margin:0 auto; padding:20px 16px 80px;}
+  header{position:sticky; top:0; z-index:10; backdrop-filter: blur(8px);
+    background:linear-gradient(to bottom, rgba(11,18,32,.9), rgba(11,18,32,.35)); border-bottom:1px solid rgba(148,163,184,.15);
+  }
+  header .bar{max-width:1100px; margin:0 auto; padding:14px 16px; display:flex; gap:12px; align-items:center;}
+  .logo{display:flex; align-items:center; gap:10px;}
+  .logo .gem{width:28px; height:28px; border-radius:10px; background:conic-gradient(from 220deg, #22d3ee, #8b5cf6, #22c55e, #22d3ee); filter: saturate(120%);
+    box-shadow:0 0 0 3px rgba(34,211,238,.1), 0 10px 30px rgba(0,0,0,.35);}
+  .title{font-weight:800; letter-spacing:.3px;}
+  .status{margin-left:auto; display:flex; gap:12px; align-items:center;}
+  .pill{border:1px solid rgba(148,163,184,.25); color:var(--muted); padding:6px 10px; border-radius:999px; font-size:12px; white-space:nowrap;}
+
+  /* панели */
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.0)); border:1px solid rgba(148,163,184,.18);
+    box-shadow: var(--shadow); border-radius:18px;}
+
+  /* экраны */
+  .screen{display:none;}
+  .screen.active{display:block; animation: fadeIn .35s ease-out both;}
+  @keyframes fadeIn {from{opacity:0; transform: translateY(8px)} to{opacity:1; transform:none}}
+
+  /* старт */
+  .start{padding:22px; display:grid; gap:18px;}
+  .start h1{margin:0; font-size:28px}
+  .grid2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px}
+  @media (max-width:760px){.grid2{grid-template-columns:1fr}}
+  .field{display:grid; gap:8px}
+  label{color:var(--muted); font-size:14px}
+  select, .btn, input[type=range]{
+    background: #0a1426; color:var(--text); border:1px solid rgba(148,163,184,.25); border-radius:12px; padding:12px; outline:none;
+  }
+  select:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(34,211,238,.2)}
+  .btn{cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:10px; font-weight:700}
+  .btn.primary{background: linear-gradient(180deg, #1fb8cf, #0ea5b6); border:0}
+  .btn.ghost{background: transparent}
+  .btn:active{transform: translateY(1px)}
+  .inline{display:flex; gap:10px; flex-wrap:wrap}
+
+  /* шапка уровня */
+  .gameHeader{display:grid; gap:10px; padding:18px; align-items:start}
+  .topRow{display:flex; gap:10px; align-items:center}
+  .progress{flex:1; height:10px; background:#0a1420; border:1px solid rgba(148,163,184,.2); border-radius:999px; overflow:hidden}
+  .progress>i{display:block; height:100%; width:0%; background:linear-gradient(90deg, #22d3ee, #8b5cf6)}
+  .score{padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,.25); color:#a5b4fc}
+  .meter{height:12px; border-radius:999px; overflow:hidden; border:1px solid rgba(148,163,184,.25);}
+  .meter>i{display:block; height:100%; width:70%; background:linear-gradient(90deg, #ef4444, #22c55e)}
+  .timer{font-variant-numeric: tabular-nums; color:#f8fafc}
+
+  /* игровая область */
+  .board{padding:20px; display:grid; gap:16px}
+  .task{font-size:18px; font-weight:700}
+  .cards{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px}
+  @media (max-width:880px){.cards{grid-template-columns:1fr}}
+
+  .card{position:relative; background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.0)); border:1px solid rgba(148,163,184,.2);
+    border-radius:16px; padding:16px; cursor:pointer; transition:.18s transform ease, .25s box-shadow ease, .25s border-color ease; user-select:none}
+  .card:hover{transform: translateY(-3px); box-shadow:0 12px 30px rgba(0,0,0,.35)}
+  .card .tag{position:absolute; top:10px; right:10px; font-size:12px; color:var(--muted)}
+  .card .title{font-weight:700}
+  .card .desc{color:var(--muted); font-size:14px; margin-top:6px}
+  .card.correct{border-color: rgba(34,197,94,.9); box-shadow: 0 0 0 3px rgba(34,197,94,.25), var(--shadow)}
+  .card.wrong{border-color: rgba(239,68,68,.8); box-shadow: 0 0 0 3px rgba(239,68,68,.2), var(--shadow); animation: shake .35s}
+  @keyframes shake{10%, 90%{transform: translateX(-1px)} 20%, 80%{transform: translateX(2px)} 30%, 50%, 70%{transform: translateX(-4px)} 40%, 60%{transform: translateX(4px)}}
+  .card.bestPulse{animation: glow .9s ease-out infinite}
+  @keyframes glow{0%{box-shadow:0 0 0 0 rgba(34,197,94,.4)} 100%{box-shadow:0 0 0 12px rgba(34,197,94,0)}}
+
+  .controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  .spacer{flex:1}
+
+  /* модалки */
+  .modalWrap{position:fixed; inset:0; display:none; place-items:center; padding:20px; z-index:50;}
+  .modalWrap.show{display:grid;}
+  .backdrop{position:absolute; inset:0; background:rgba(2,6,23,.7); backdrop-filter: blur(3px)}
+  .modal{position:relative; width:min(760px, 92vw);}
+  .modal .content{padding:20px}
+  .modal h2{margin:0 0 8px}
+  .modal .actions{display:flex; gap:10px; justify-content:flex-end; padding:0 20px 20px}
+
+  /* тосты */
+  .toast{position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:#0b152a; color:var(--text); padding:12px 14px; border:1px solid rgba(148,163,184,.25); border-radius:12px; z-index:60; display:none}
+  .toast.show{display:block; animation:fadeIn .2s}
+
+  /* мини-иконки */
+  .mi{width:1em;height:1em; display:inline-block; vertical-align:-.15em}
+  .mi.timer{background: radial-gradient(circle at 50% 30%, #fff, #cbd5e1); -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M15 1H9v2h6V1Zm-3 20a8 8 0 1 1 0-16a8 8 0 0 1 0 16Zm0-2a6 6 0 1 0 0-12a6 6 0 0 0 0 12Zm1-9h-2v4h4v-2h-2V10Z"/></svg>') center/contain no-repeat}
+  .mi.spark{background: radial-gradient(circle at 50% 50%, #fff, #a5b4fc); -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M11 2l1.5 4.5L17 8l-4.5 1.5L11 14l-1.5-4.5L5 8l4.5-1.5Z"/></svg>') center/contain no-repeat}
+  .mi.leaf{background: radial-gradient(circle at 50% 50%, #34d399, #10b981); -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M13 3s-9 2-9 11s8 7 8 7s9-2 9-11s-8-7-8-7Zm0 2s6 1 6 6s-5 7-5 7s-6-1-6-6s5-7 5-7Z"/></svg>') center/contain no-repeat}
+</style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div class="logo"><span class="gem"></span><div class="title">FixTheEarth:Помоги странам улучшить экологию!</div></div>
+      <div class="status">
+        <span class="pill" id="countryPill">Страна: —</span>
+        <span class="pill" id="diffPill">Сложность: —</span>
+        <span class="pill"><i class="mi timer"></i> <span id="timePill">—:—</span></span>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <!-- Стартовый экран -->
+    <section id="screen-start" class="screen active panel start">
+      <h1>Выбери страну и сложность</h1>
+      <div class="grid2">
+        <div class="field">
+          <label for="country">Страна (влияет на задания)</label>
+          <select id="country">
+            <option value="kz">Казахстан</option>
+            <option value="dk">Дания</option>
+            <option value="gr">Греция</option>
+            <option value="global">Глобально</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="difficulty">Сложность</label>
+          <select id="difficulty">
+            <option value="easy">Лёгкая</option>
+            <option value="medium" selected>Средняя</option>
+            <option value="hard">Сложная</option>
+          </select>
+        </div>
+      </div>
+      <div class="panel" style="padding:14px; display:grid; gap:8px">
+        <div style="color:var(--muted)">Коротко:</div>
+        <div>• На каждом раунде сверху текст <b>Задание</b>, снизу варианты‑карточки. Выбери <u>самый устойчивый</u> вариант.</div>
+        <div>• Верный выбор — зелёное свечение. Ошибка — штраф. Пройди все раунды, не исчерпав эко‑метр.</div>
+      </div>
+      <div class="inline">
+        <button class="btn ghost" id="btnRules">Показать правила</button>
+        <div class="spacer"></div>
+        <button class="btn primary" id="btnStart"><i class="mi spark"></i> Начать игру</button>
+      </div>
+    </section>
+
+    <!-- Шапка уровня/прогресс -->
+    <section id="screen-game" class="screen">
+      <div class="panel gameHeader">
+        <div class="topRow">
+          <div class="progress" title="Прогресс"><i id="progressBar"></i></div>
+          <div class="score" title="Очки">Очки: <b id="score">0</b></div>
+        </div>
+        <div class="inline" style="align-items:center">
+          <div style="min-width:80px; color:var(--muted)">Эко‑метр</div>
+          <div class="meter" style="flex:1"><i id="ecoMeter" style="width:72%"></i></div>
+          <div class="spacer"></div>
+          <div class="timer">Раунд: <b id="roundNum">1</b> / <span id="roundTotal">10</span> • Время: <b id="roundTime">—</b></div>
+        </div>
+      </div>
+
+      <!-- Игровая область -->
+      <div class="panel board">
+        <div class="task" id="taskText">Здесь будет задание…</div>
+        <div class="cards" id="cards"></div>
+        <div class="controls">
+          <button class="btn ghost" id="btnHint">Подсказка (−5 очков)</button>
+          <button class="btn ghost" id="btnSkip">Пропустить (−10 эко)</button>
+          <div class="spacer"></div>
+          <button class="btn primary" id="btnNext" disabled>Дальше</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Модал: Правила -->
+    <div id="modal-rules" class="modalWrap">
+      <div class="backdrop" data-close></div>
+      <div class="modal panel">
+        <div class="content">
+          <h2>Правила</h2>
+          <ol>
+            <li>Выберите страну и уровень сложности. Это влияет на задания, таймер и количество событий.</li>
+            <li>Читайте <b>задание</b> сверху и нажимайте на карточку‑вариант. Лучший вариант подсветится <span style="color:var(--good)">зелёным</span>.</li>
+            <li>За верный выбор — очки и рост эко‑метра. За ошибку — штраф и <span style="color:var(--bad)">красный</span> индикатор проблемы загорится.</li>
+            <li>Иногда случаются <span style="color:var(--warn)">неожиданные события</span>. Принимайте быстрые решения с последствиями.</li>
+            <li>Подсказка сжигает 5 очков, пропуск — −10 эко. Дойдите до конца раундов, сохранив эко‑метр &gt; 0.</li>
+          </ol>
+        </div>
+        <div class="actions">
+          <button class="btn" data-close>Понятно</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модал: Событие -->
+    <div id="modal-event" class="modalWrap">
+      <div class="backdrop"></div>
+      <div class="modal panel">
+        <div class="content">
+          <h2 style="color:var(--warn)">Непредвиденное событие</h2>
+          <div id="eventText" style="margin-top:6px"></div>
+        </div>
+        <div class="actions">
+          <button class="btn ghost" id="eventA"></button>
+          <button class="btn primary" id="eventB"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модал: Итог -->
+    <div id="modal-end" class="modalWrap">
+      <div class="backdrop"></div>
+      <div class="modal panel">
+        <div class="content">
+          <h2 id="endTitle">Игра окончена</h2>
+          <p id="endText">Ваш результат — …</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btnRestart">Сыграть снова</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast">Подсказка: зелёное свечение у лучшего ответа</div>
+  </div>
+
+<script>
+  // ====== Игровые данные ======
+  const POOLS = {
+    kz: [
+      {
+        task: 'Город растёт, нужно уменьшить загрязнение воздуха. Что в первую очередь внедрить?',
+        options: [
+          'Бесплатный общественный транспорт в часы пик',
+          'Расширить автомобильные магистрали',
+          'Субсидии на электровелосипеды и велополосы',
+          'Строить больше парковок в центре',
+          'Строже техосмотр без альтернатив',
+        ],
+        best: 0, explain: 'Убираем машины с дорог в перегруженные часы, быстрый эффект + справедливость.'
+      },
+      {
+        task: 'Степные пожары становятся чаще. Первая мера?',
+        options: [
+          'Обучить и оснастить добровольные дружины в селах',
+          'Покупать больше вертолётов',
+          'Запретить пикники',
+          'Оставить всё как есть',
+        ], best: 0, explain: 'Профилактика и быстрая реакция на месте эффективнее единичной дорогой техники.'
+      },
+      {
+        task: 'Снижение водопотребления в Алматы летом:',
+        options: [
+          'Дотации на капельный полив и мульчу в садах',
+          'Поливить газоны днём для красоты',
+          'Запретить постройки вообще',
+          'Игнорировать утечки',
+        ], best: 0, explain: 'Капельный полив даёт наибольшую экономию воды.'
+      },
+    ],
+    dk: [
+      {
+        task: 'Копенгаген снижает выбросы. Что масштабировать?',
+        options: [
+          'Тепловые насосы в старом фонде',
+          'Сжигать больше мусора для энергии',
+          'Субсидии дизелю',
+          'Ничего не менять',
+        ], best: 0, explain: 'Электрификация отопления — ключ к декарбонизации.'
+      },
+      {
+        task: 'Гавань страдает от цветения водорослей. Первое действие?',
+        options: [
+          'Зелёные крыши и ливневые сады в городе',
+          'Больше химикатов в воду',
+          'Увеличить траление',
+        ], best: 0, explain: 'Задержка и фильтрация стоков в городе сокращают нутриенты.'
+      }
+    ],
+    gr: [
+      {
+        task: 'Остров перегружен туризмом. Что смягчит нагрузку?',
+        options: [
+          'Динамическая экосбор‑квота в пик сезона',
+          'Снижение цены авиабилетов',
+          'Строить отели на береговой линии',
+          'Реклама аренды суперъяхт',
+        ], best: 0, explain: 'Ценовые и количественные сигналы в пик — рабочий инструмент.'
+      },
+      {
+        task: 'Жара и пожары. Что внедрить в селах?',
+        options: [
+          'Пояса из огнестойких пород + планы эвакуации',
+          'Полагаться на дождь',
+          'Убрать все деревья',
+        ], best: 0, explain: 'Лесомелиорация + готовность — доказанная мера снижения риска.'
+      }
+    ],
+    global: [
+      {
+        task: 'Компания выбирает поставщика. Что важнее для устойчивости?',
+        options: [
+          'Прозрачный след Scope 3 и локальная логистика',
+          'Самая низкая цена без данных',
+          'Ежегодный отчёт с красивыми картинками',
+        ], best: 0, explain: 'Scope 3 и расстояние логистики — существенная доля воздействия.'
+      },
+      {
+        task: 'Как сократить бытовые отходы?',
+        options: [
+          'Платёж за объём мусора + раздельный сбор',
+          'Бесплатный вывоз без ограничений',
+          'Сжигать всё',
+        ], best: 0, explain: 'Плата за объём + инфраструктура меняют поведение и поток материалов.'
+      }
+    ]
+  };
+
+  const EVENTS = [
+    {
+      text: 'Засуха ударила сильнее прогноза. Что делаем?',
+      a: {label:'Экстренно ремонтируем утечки (−15 очков, +15 эко)', score:-15, eco:+15},
+      b: {label:'Ограничиваем полив парков (−5 эко, +10 очков)', score:+10, eco:-5}
+    },
+    {
+      text: 'Скандал с переработкой: подрядчик мухлевал.',
+      a: {label:'Проводим аудит и меняем подрядчика (−10 очков, +10 эко)', score:-10, eco:+10},
+      b: {label:'Заминаем скандал (−15 эко, +5 очков)', score:+5, eco:-15}
+    },
+    {
+      text: 'Гроза повредила солнечную станцию.',
+      a: {label:'Страховка на восстановление (−5 очков, +5 эко)', score:-5, eco:+5},
+      b: {label:'Оставить как есть до следующего года (+10 очков, −10 эко)', score:+10, eco:-10}
+    }
+  ];
+
+const DIFF = {
+  easy:   {rounds:8,  time:30, eventChance:0.2,  reward:12, penalty:12, hintGlow:true,  maxOptions:3},
+  medium: {rounds:10, time:24, eventChance:0.35, reward:12, penalty:14, hintGlow:false, maxOptions:4},
+  hard:   {rounds:12, time:18, eventChance:0.5,  reward:10, penalty:16, hintGlow:false, maxOptions:5},
+};
+  // ====== Состояние ======
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => document.querySelectorAll(sel);
+  const rand = (n) => Math.floor(Math.random()*n);
+
+  let state = {
+    country:'global', diff:'medium', pool:[],
+    round:1, roundsTotal:10, score:0, eco:70,
+    current:null, allowPick:true, timer:null, tLeft:0, bestIndex:0,
+  };
+
+  // ====== Навигация экранов ======
+  function showScreen(id){
+    $$('.screen').forEach(s=>s.classList.remove('active'));
+    $(id).classList.add('active');
+  }
+
+  // ====== Подготовка партии ======
+  function buildPool(country){
+    const base = POOLS[country] ? [...POOLS[country]] : [];
+    const fallback = POOLS.global.filter(x=>!base.find(b=>b.task===x.task));
+    const combined = [...base, ...fallback];
+    // Немного перемешаем
+    for(let i=combined.length-1;i>0;i--){ const j=rand(i+1); [combined[i],combined[j]]=[combined[j],combined[i]] }
+    return combined;
+  }
+
+  function startGame(){
+    state.country = $('#country').value;
+    state.diff = $('#difficulty').value;
+    const d = DIFF[state.diff];
+    state.pool = buildPool(state.country);
+    state.round = 1; state.roundsTotal = d.rounds; state.score=0; state.eco=70;
+    $('#roundTotal').textContent = state.roundsTotal;
+    $('#countryPill').textContent = 'Страна: ' + countryLabel(state.country);
+    $('#diffPill').textContent = 'Сложность: ' + diffLabel(state.diff);
+    $('#score').textContent = 0; $('#roundNum').textContent = 1;
+    $('#ecoMeter').style.width = state.eco+'%';
+    updateProgress();
+
+    showScreen('#screen-game');
+    nextRound();
+  }
+
+  function countryLabel(c){
+    return {kz:'Казахстан', dk:'Дания', gr:'Греция', global:'Глобально'}[c]||c;
+  }
+  function diffLabel(d){
+    return {easy:'Лёгкая', medium:'Средняя', hard:'Сложная'}[d]||d;
+  }
+
+  // ====== Раунд ======
+  function nextRound(){
+    if(state.round>state.roundsTotal){ return endGame(true); }
+    const d = DIFF[state.diff];
+
+    // Выбираем задание
+    const item = state.pool[(state.round-1) % state.pool.length];
+    // Построим набор опций с нужным количеством
+    const options = [...item.options];
+    // Если опций меньше, добавим нейтральные
+    while(options.length < d.maxOptions){ options.push('Ничего не предпринимать'); }
+    // Перемешаем, но будем помнить лучший
+    const mapping = options.map((text,i)=>({text, origIndex:i}));
+    for(let i=mapping.length-1;i>0;i--){ const j=rand(i+1); [mapping[i],mapping[j]]=[mapping[j],mapping[i]] }
+    const bestOrig = item.best;
+    const bestIdx = mapping.findIndex(m=>m.origIndex===bestOrig);
+    state.bestIndex = bestIdx;
+    state.current = { task:item.task, options:mapping.map(m=>m.text), explain:item.explain };
+
+    // Рендер
+    $('#taskText').textContent = 'Задание: ' + state.current.task;
+    const cards = $('#cards'); cards.innerHTML='';
+    state.current.options.forEach((text, idx)=>{
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = `<div class="title">${sanitize(text)}</div><div class="desc"></div><div class="tag">Вариант ${idx+1}</div>`;
+      el.addEventListener('click', ()=>pick(idx, el));
+      cards.appendChild(el);
+    });
+
+    // Подсказка — лёгкое свечение лучшего
+    if(d.hintGlow){
+      setTimeout(()=>{
+        const bestEl = cards.children[state.bestIndex];
+        bestEl.classList.add('bestPulse');
+        setTimeout(()=>bestEl.classList.remove('bestPulse'), 1400);
+      }, 350);
+    }
+
+    // Таймер
+    startTimer(d.time);
+    $('#btnNext').disabled = true;
+    state.allowPick = true;
+    $('#roundNum').textContent = state.round;
+  }
+
+  function pick(idx, el){
+    if(!state.allowPick) return;
+    state.allowPick = false;
+    stopTimer();
+    const d = DIFF[state.diff];
+
+    const cards = Array.from($('#cards').children);
+    cards.forEach(c=>c.style.pointerEvents='none');
+
+    const isBest = idx===state.bestIndex;
+    if(isBest){
+      el.classList.add('correct');
+      addScore(d.reward); addEco(+12);
+    } else {
+      el.classList.add('wrong');
+      cards[state.bestIndex].classList.add('correct');
+      addEco(-d.penalty);
+    }
+
+    // Короткая задержка и включаем «Дальше»
+    setTimeout(()=>{
+      $('#btnNext').disabled=false;
+    }, 500);
+  }
+
+  function addScore(n){ state.score+=n; if(state.score<0) state.score=0; $('#score').textContent = state.score; }
+  function addEco(n){ state.eco+=n; state.eco=Math.max(0, Math.min(100, state.eco)); $('#ecoMeter').style.width = state.eco+'%'; if(state.eco<=0){ endGame(false); } }
+
+  function updateProgress(){
+    const pct = Math.round(((state.round-1)/state.roundsTotal)*100);
+    $('#progressBar').style.width = pct+'%';
+  }
+
+  // ====== Таймер раунда ======
+  function startTimer(sec){
+    state.tLeft = sec; $('#roundTime').textContent = sec+'с'; $('#timePill').textContent = sec+'с';
+    clearInterval(state.timer);
+    state.timer = setInterval(()=>{
+      state.tLeft--; $('#roundTime').textContent = state.tLeft+'с'; $('#timePill').textContent = state.tLeft+'с';
+      if(state.tLeft<=0){
+        clearInterval(state.timer);
+        timesUp();
+     const t = $('#time');
+t.textContent = state.time;
+
+if (state.time <= 5) {
+  t.classList.add('warning');
+} else {
+  t.classList.remove('warning');
+}
+      }
+
+
+    },1000);
+  }
+  function stopTimer(){ clearInterval(state.timer); }
+  function timesUp(){
+    if(!state.allowPick) return; // уже выбран
+    state.allowPick=false;
+    const cards = Array.from($('#cards').children);
+    cards.forEach(c=>c.style.pointerEvents='none');
+    cards[state.bestIndex].classList.add('correct');
+    addEco(-DIFF[state.diff].penalty); // штраф за время
+    $('#btnNext').disabled=false;
+  }
+
+  // ====== События ======
+  function maybeEvent(cbAfter){
+    const chance = DIFF[state.diff].eventChance;
+    if(Math.random()<chance){
+      const ev = EVENTS[rand(EVENTS.length)];
+      $('#eventText').textContent = ev.text;
+      const aBtn = $('#eventA'), bBtn = $('#eventB');
+      aBtn.textContent = ev.a.label; bBtn.textContent = ev.b.label;
+      const apply = (eff)=>{
+        addScore(eff.score); addEco(eff.eco); hideModal('#modal-event'); cbAfter&&cbAfter();
+      };
+      aBtn.onclick = ()=>apply(ev.a);
+      bBtn.onclick = ()=>apply(ev.b);
+      showModal('#modal-event');
+    } else { cbAfter&&cbAfter(); }
+  }
+
+  // ====== Конец игры ======
+  function endGame(win){
+    stopTimer();
+    const title = win? 'Победа!': 'Эко‑метр исчерпан';
+    const text = `Результат: ${state.score} очков. Пройдено раундов: ${Math.min(state.round, state.roundsTotal)} / ${state.roundsTotal}.`;
+    $('#endTitle').textContent = title;
+    $('#endText').textContent = text;
+    showModal('#modal-end');
+  }
+
+  // ====== Утилиты UI ======
+  function showToast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 1800); }
+  function showModal(sel){ $(sel).classList.add('show'); }
+  function hideModal(sel){ $(sel).classList.remove('show'); }
+  document.body.addEventListener('click', (e)=>{ if(e.target.matches('[data-close]')){ hideModal('#modal-rules'); } });
+
+  function sanitize(s){ return s.replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
+
+  // ====== Кнопки ======
+  $('#btnRules').addEventListener('click', ()=>showModal('#modal-rules'));
+  $('#btnStart').addEventListener('click', startGame);
+  $('#btnRestart').addEventListener('click', ()=>{ hideModal('#modal-end'); showScreen('#screen-start'); });
+
+  $('#btnNext').addEventListener('click', ()=>{
+    // после раунда возможно событие
+    updateProgress();
+    state.round++;
+    if(state.round>state.roundsTotal){ endGame(true); return; }
+    maybeEvent(()=> nextRound());
+  });
+
+  $('#btnHint').addEventListener('click', ()=>{
+    if(state.score<5){ return showToast('Недостаточно очков для подсказки'); }
+    addScore(-5);
+    const el = $('#cards').children[state.bestIndex];
+    el.classList.add('bestPulse'); setTimeout(()=>el.classList.remove('bestPulse'), 1400);
+  });
+
+  $('#btnSkip').addEventListener('click', ()=>{
+    addEco(-10); if(state.eco<=0) return; // мог закончиться
+    stopTimer();
+    $('#btnNext').disabled=false; state.allowPick=false;
+    const cards = Array.from($('#cards').children);
+    cards.forEach(c=>c.style.pointerEvents='none');
+    showToast('Раунд пропущен (−10 эко)');
+  });
+
+</script>
+</body>
+</html>
